@@ -185,6 +185,7 @@ export default function HomePage() {
     damping: 50,
     stiffness: 400
   });
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -201,6 +202,8 @@ export default function HomePage() {
     handleResize();
     window.addEventListener('resize', handleResize);
     window.addEventListener('mousemove', handleMouseMove);
+
+    setIsMounted(true);
 
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -264,6 +267,17 @@ export default function HomePage() {
       difficulty: "Rewards"
     }
   ];
+
+  // Only render scroll-dependent components after mounting
+  if (!isMounted) {
+    return (
+      <main className="min-h-screen bg-black text-white">
+        <div className="h-screen flex items-center justify-center">
+          <h1 className="text-4xl font-bold">Loading...</h1>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#020010] text-white relative overflow-hidden">

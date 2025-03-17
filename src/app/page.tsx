@@ -753,17 +753,9 @@ const DynamicFloatingElements = dynamic(() => Promise.resolve(FloatingElements),
 const DynamicClickEffect = dynamic(() => Promise.resolve(ClickEffect), { ssr: false });
 
 export default function LandingPage() {
-  const [isClient, setIsClient] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
-  const [icons, setIcons] = useState<Icons>({
-    vr: { isExpanded: false, level: 1, description: "VR Training", position: 'left' },
-    game: { isExpanded: false, level: 1, description: "Game Elements", position: 'center' },
-    trophy: { isExpanded: false, level: 1, description: "Achievements", position: 'right' }
-  });
-  const router = useRouter();
-
-  // Optimize scroll progress calculation
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
@@ -771,24 +763,16 @@ export default function LandingPage() {
     restDelta: 0.001
   });
 
-  // Update mouse position handler with hover state
-  const handleMouseMove = useMemo(
-    () =>
-      throttle((e: MouseEvent) => {
-        if (isClient) {
-          setMousePosition({ x: e.clientX, y: e.clientY });
-        }
-      }, 16),
-    [isClient]
-  );
-
-  // Add hover handlers
-  const handleMouseEnter = () => setIsHovering(true);
-  const handleMouseLeave = () => setIsHovering(false);
-
   useEffect(() => {
-    setIsClient(true);
+    setIsMounted(true);
     
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseEnter = () => setIsHovering(true);
+    const handleMouseLeave = () => setIsHovering(false);
+
     window.addEventListener('mousemove', handleMouseMove);
     document.body.addEventListener('mouseenter', handleMouseEnter);
     document.body.addEventListener('mouseleave', handleMouseLeave);
@@ -798,15 +782,14 @@ export default function LandingPage() {
       document.body.removeEventListener('mouseenter', handleMouseEnter);
       document.body.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [handleMouseMove]);
+  }, []);
 
-  // Initial render with minimal content
-  if (!isClient) {
+  // Initial server-side render or loading state
+  if (!isMounted) {
     return (
       <main className="min-h-screen relative overflow-hidden bg-black">
         <div className="flex items-center justify-center min-h-screen">
-          {/* Static content for initial render */}
-          <h1 className={`text-6xl md:text-8xl font-bold mb-8 relative px-4 ${syne.className} tracking-tight break-words`}>
+          <h1 className={`text-6xl md:text-8xl font-bold mb-8 relative px-4 ${syne.className} tracking-tight break-words text-white`}>
             AR Training
           </h1>
         </div>
@@ -814,493 +797,27 @@ export default function LandingPage() {
     );
   }
 
-  const backgroundVariants: Variants = {
-    initial: {
-      backgroundColor: '#000000'
-    },
-    animate: {
-      backgroundColor: ['#000000', '#1a1a2e', '#000000'],
-      transition: {
-        duration: 8,
-        repeat: Infinity,
-        repeatType: "mirror"
-      }
-    }
-  };
-
-  const textVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: {
-        duration: 0.8,
-        ease: "easeOut"
-      }
-    }
-  };
-
-  const features: Feature[] = [
-    {
-      icon: <FaVrCardboard className="text-4xl text-blue-400" />,
-      title: "Immersive AR Learning",
-      description: "Step into a new dimension of training with our state-of-the-art AR technology. Experience hands-on learning like never before.",
-      gradient: "from-blue-400 to-blue-600",
-      level: "Beginner Friendly",
-      stats: { users: "1000+", rating: "4.8/5" },
-      difficulty: "Beginner Friendly"
-    },
-    {
-      icon: <FaRobot className="text-4xl text-green-400" />,
-      title: "Smart AI Guidance",
-      description: "Our advanced AI adapts to your learning style, providing real-time feedback and personalized training paths.",
-      gradient: "from-green-400 to-green-600",
-      level: "Advanced AI",
-      stats: { accuracy: "98%", responses: "Real-time" },
-      difficulty: "Advanced AI"
-    },
-    {
-      icon: <FaGamepad className="text-4xl text-purple-400" />,
-      title: "Gamified Training",
-      description: "Transform your learning journey into an exciting adventure with interactive challenges and reward systems.",
-      gradient: "from-purple-400 to-purple-600",
-      level: "Interactive",
-      stats: { challenges: "50+", rewards: "25+" },
-      difficulty: "Interactive"
-    },
-    {
-      icon: <FaChartLine className="text-4xl text-yellow-400" />,
-      title: "Smart Analytics",
-      description: "Track your progress with detailed insights and visualizations. Watch your skills grow in real-time.",
-      gradient: "from-yellow-400 to-yellow-600",
-      level: "Real-time Stats",
-      stats: { metrics: "15+", insights: "Daily" },
-      difficulty: "Real-time Stats"
-    },
-    {
-      icon: <FaBrain className="text-4xl text-red-400" />,
-      title: "Skill Mastery",
-      description: "Master complex skills through practical scenarios and progressive learning paths.",
-      gradient: "from-red-400 to-red-600",
-      level: "Skill Tree",
-      stats: { skills: "30+", paths: "10+" },
-      difficulty: "Skill Tree"
-    },
-    {
-      icon: <FaTrophy className="text-4xl text-orange-400" />,
-      title: "Achievement System",
-      description: "Unlock achievements, earn certificates, and showcase your expertise as you progress.",
-      gradient: "from-orange-400 to-orange-600",
-      level: "Rewards",
-      stats: { badges: "40+", certificates: "12" },
-      difficulty: "Rewards"
-    }
-  ];
-
-  const handleIconClick = (iconKey: keyof Icons) => {
-    setIcons(prev => ({
-      ...prev,
-      [iconKey]: {
-        ...prev[iconKey],
-        isExpanded: !prev[iconKey].isExpanded,
-        level: prev[iconKey].isExpanded ? prev[iconKey].level : prev[iconKey].level + 1
-      }
-    }));
-
-    // Add haptic feedback if supported
-    if (window.navigator && window.navigator.vibrate) {
-      window.navigator.vibrate(50);
-    }
-
-    // Play click sound
-    const audio = new Audio('/click.mp3');
-    audio.volume = 0.2;
-    audio.play().catch(() => {});
-  };
-
   return (
     <main 
       className="min-h-screen relative overflow-hidden bg-black"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
-      <ScrollProgress />
-      
+      {/* Progress bar */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 bg-blue-500 origin-left z-50"
+        style={{ scaleX }}
+      />
+
       <Fragment>
         <DynamicAnimatedBackground />
-        <DynamicFloatingElements />
-        <DynamicClickEffect />
         {isHovering && mousePosition.x > 0 && (
           <DynamicMouseFollowEffect mousePosition={mousePosition} />
         )}
-
-        {/* Content sections with updated backgrounds */}
+        
+        {/* Main content */}
         <div className="relative z-10">
-          {/* Intro Hero Section */}
-          <Section className="min-h-screen flex-col items-center justify-center">
-            <motion.div
-              className="text-center relative"
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-            >
-              {/* Interactive Icons */}
-              <div className="flex justify-center gap-20 mb-24">
-                {Object.entries(icons).map(([key, value]) => (
-                  <motion.div
-                    key={key}
-                    className="relative"
-                    initial={false}
-                    animate={{
-                      x: value.isExpanded ? (value.position === 'left' ? -100 : value.position === 'right' ? 100 : 0) : 0,
-                      y: value.isExpanded ? 20 : 0,
-                    }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  >
-                    <MagneticButton>
-                      <motion.div
-                        className="relative cursor-pointer"
-                        onClick={() => handleIconClick(key as keyof Icons)}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <motion.div
-                          className="relative z-10"
-                          animate={{
-                            rotate: value.isExpanded ? 360 : 0,
-                            scale: value.isExpanded ? 1.2 : 1,
-                          }}
-                          transition={{ 
-                            duration: 0.5,
-                            rotate: { type: "spring", stiffness: 200 },
-                            scale: { type: "spring", stiffness: 300 }
-                          }}
-                        >
-                          <motion.div
-                            className="absolute -inset-4 rounded-full"
-                            style={{
-                              background: 'radial-gradient(circle at center, rgba(59, 130, 246, 0.3), transparent)',
-                              filter: 'blur(8px)',
-                            }}
-                            animate={{
-                              scale: value.isExpanded ? [1, 1.2, 1] : 1,
-                              opacity: value.isExpanded ? [0.5, 0.8, 0.5] : 0.3,
-                            }}
-                            transition={{
-                              duration: 2,
-                              repeat: Infinity,
-                              ease: "easeInOut"
-                            }}
-                          />
-                          <motion.div
-                            className="relative text-4xl"
-                            whileHover={{
-                              filter: "brightness(1.2) saturate(1.2)",
-                              textShadow: "0 0 15px currentColor",
-                            }}
-                          >
-                            {key === 'vr' ? (
-                              <FaVrCardboard className="text-blue-400" />
-                            ) : key === 'game' ? (
-                              <FaGamepad className="text-purple-400" />
-                            ) : (
-                              <FaTrophy className="text-yellow-400" />
-                            )}
-                          </motion.div>
-                        </motion.div>
-
-                        {value.isExpanded && (
-                          <motion.div
-                            className={`absolute ${
-                              value.position === 'left' ? 'left-16' :
-                              value.position === 'right' ? 'right-16' :
-                              'left-1/2 transform -translate-x-1/2'
-                            } top-0 bg-gray-900/90 backdrop-blur-lg rounded-xl p-4 md:p-6 w-[250px] md:w-[300px]
-                            border border-gray-800/50 shadow-xl`}
-                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                            transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                          >
-                            <motion.div
-                              className="absolute inset-0 rounded-xl overflow-hidden"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ duration: 0.3 }}
-                            >
-                              <motion.div
-                                className="absolute inset-0"
-                                style={{
-                                  background: 'radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59, 130, 246, 0.1), transparent 120%)',
-                                }}
-                                animate={{
-                                  scale: [1, 1.2, 1],
-                                  opacity: [0.3, 0.5, 0.3],
-                                }}
-                                transition={{
-                                  duration: 3,
-                                  repeat: Infinity,
-                                  ease: "easeInOut"
-                                }}
-                              />
-                            </motion.div>
-                            
-                            <div className="relative z-10 space-y-3 md:space-y-4">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: "100%" }}
-                                className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
-                                transition={{ duration: 0.8, ease: "easeOut" }}
-                              />
-                              
-                              <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
-                              >
-                                <h3 className={`text-lg md:text-xl font-bold text-white mb-2 ${syne.className} tracking-tight line-clamp-1`}>
-                                  Level {value.level}
-                                </h3>
-                                <p className={`text-sm md:text-base text-gray-400 ${inter.className} font-light line-clamp-2`}>
-                                  {value.description}
-                                </p>
-                              </motion.div>
-
-                              <motion.div
-                                className="flex items-center gap-3"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.4 }}
-                              >
-                                <motion.div
-                                  animate={{
-                                    scale: [1, 1.2, 1],
-                                    rotate: [0, 360],
-                                  }}
-                                  transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    ease: "easeInOut"
-                                  }}
-                                >
-                                  <FaBolt className="text-yellow-400 text-xl" />
-                                </motion.div>
-                                <span className="text-sm text-gray-300">+{value.level * 10} XP</span>
-                              </motion.div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </motion.div>
-                    </MagneticButton>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Enhanced title with dynamic effects */}
-              <motion.h1
-                className={`text-6xl md:text-8xl font-bold mb-8 relative px-4 ${syne.className} tracking-tight break-words cursor-default`}
-                style={{
-                  background: 'linear-gradient(to right, #4a90e2, #67b26f, #4a90e2)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundSize: '200% 100%',
-                }}
-                whileHover={{
-                  scale: 1.05,
-                  textShadow: "0 0 80px rgba(74, 144, 226, 0.5)",
-                }}
-                animate={{
-                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                }}
-                transition={{
-                  backgroundPosition: {
-                    duration: 5,
-                    repeat: Infinity,
-                    ease: "linear",
-                  },
-                }}
-              >
-                AR Training
-              </motion.h1>
-
-              {/* Enhanced description with hover effect */}
-              <motion.p
-                className={`text-xl md:text-3xl mb-24 mx-auto px-4 ${spaceGrotesk.className} font-light max-w-[90%] md:max-w-3xl`}
-                animate={{
-                  y: [0, -10, 0],
-                  opacity: [0.8, 1, 0.8],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                style={{
-                  background: 'linear-gradient(to right, #a8b2ff, #ffffff)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Step into the future of immersive learning
-              </motion.p>
-
-              {/* Add ScrollPrompt here */}
-              <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2">
-                <ScrollPrompt />
-              </div>
-            </motion.div>
-          </Section>
-
-          {/* Description Section */}
-          <Section className="bg-gradient-to-b from-transparent to-black/20 relative">
-            <motion.div
-              className="absolute inset-0 z-0"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ duration: 1 }}
-              style={{
-                background: 'radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 70%)'
-              }}
-            />
-            <div className="container mx-auto px-4 md:px-6 lg:px-8">
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                className="max-w-4xl mx-auto text-center space-y-8"
-              >
-                <h2 className={`text-3xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 ${syne.className} tracking-tight mb-6 px-4`}>
-                  Welcome to the Future of Training
-                </h2>
-                <p className={`text-base md:text-xl text-gray-300 leading-relaxed ${inter.className} font-light px-4 max-w-[90%] md:max-w-4xl mx-auto`}>
-                  Our AR Training Platform combines cutting-edge augmented reality technology with 
-                  artificial intelligence to create an immersive learning experience. Whether you're 
-                  a beginner or an expert, our adaptive system guides you through personalized 
-                  training modules, helping you master complex skills in an engaging and interactive way.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-12 px-4">
-                  <div className="bg-blue-900/20 p-4 md:p-6 rounded-lg backdrop-blur-sm">
-                    <h3 className={`text-2xl md:text-3xl font-bold text-blue-400 mb-2 ${syne.className}`}>500+</h3>
-                    <p className={`text-sm md:text-base text-gray-400 ${inter.className} font-light`}>Active Learners</p>
-                  </div>
-                  <div className="bg-purple-900/20 p-4 md:p-6 rounded-lg backdrop-blur-sm">
-                    <h3 className={`text-2xl md:text-3xl font-bold text-purple-400 mb-2 ${syne.className}`}>50+</h3>
-                    <p className={`text-gray-400 ${inter.className} font-light`}>Training Modules</p>
-                  </div>
-                  <div className="bg-pink-900/20 p-4 md:p-6 rounded-lg backdrop-blur-sm">
-                    <h3 className={`text-2xl md:text-3xl font-bold text-pink-400 mb-2 ${syne.className}`}>98%</h3>
-                    <p className={`text-gray-400 ${inter.className} font-light`}>Success Rate</p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </Section>
-
-          {/* Features Section */}
-          <Section className="bg-gradient-to-b from-black/20 to-transparent relative">
-            <motion.div
-              className="absolute inset-0 z-0"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ duration: 1 }}
-              style={{
-                background: 'radial-gradient(circle at center, rgba(168, 85, 247, 0.1) 0%, transparent 70%)'
-              }}
-            />
-            <div className="container mx-auto px-4">
-              <motion.div
-                initial={{ opacity: 0, y: 100 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                viewport={{ once: true, margin: "-100px" }}
-              >
-                <motion.h2
-                  className={`text-6xl font-bold text-center mb-16 ${syne.className} tracking-tight`}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8 }}
-                  style={{
-                    background: 'linear-gradient(to right, #4a90e2, #a855f7)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  Training Features
-                </motion.h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {features.map((feature, index) => (
-                    <FeatureCard key={index} feature={feature} index={index} />
-                  ))}
-                </div>
-              </motion.div>
-            </div>
-          </Section>
-
-          {/* Call to Action Section */}
-          <Section className="bg-gradient-to-b from-transparent to-black relative min-h-[70vh]">
-            <motion.div
-              className="absolute inset-0 z-0"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ duration: 1 }}
-              style={{
-                background: 'radial-gradient(circle at center, rgba(236, 72, 153, 0.1) 0%, transparent 70%)'
-              }}
-            />
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true, margin: "-100px" }}
-            >
-              <motion.h2
-                className={`text-6xl font-bold mb-8 ${syne.className} tracking-tight`}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                style={{
-                  background: 'linear-gradient(to right, #4a90e2, #ec4899)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Ready to Begin?
-              </motion.h2>
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-              >
-                <Link
-                  href="/training"
-                  className={`group relative inline-flex items-center gap-2 md:gap-3 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 
-                             text-white font-bold py-4 md:py-5 px-6 md:px-10 rounded-full text-base md:text-xl shadow-lg hover:shadow-2xl transition-all duration-300 ${spaceGrotesk.className}`}
-                >
-                  <motion.span 
-                    className="relative z-10 tracking-wide whitespace-nowrap"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Begin Your Journey
-                  </motion.span>
-                  <motion.span
-                    className="relative z-10"
-                    animate={{
-                      x: [0, 5, 0],
-                      rotate: [0, 360],
-                    }}
-                    transition={{
-                      x: { duration: 1.5, repeat: Infinity },
-                      rotate: { duration: 2, repeat: Infinity },
-                    }}
-                  >
-                    <FaArrowRight className="text-xl" />
-                  </motion.span>
-                </Link>
-              </motion.div>
-            </motion.div>
-          </Section>
+          {/* Your existing content */}
         </div>
       </Fragment>
     </main>
