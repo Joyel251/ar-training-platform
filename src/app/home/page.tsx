@@ -27,37 +27,43 @@ const Section = ({ children, className = "" }: { children: React.ReactNode, clas
   );
 };
 
-const ParallaxText = ({ children, baseVelocity = 100 }: { children: string, baseVelocity?: number }) => {
+const ParallaxText: React.FC<{ children: string, baseVelocity?: number }> = ({ children, baseVelocity = 100 }) => {
+  const [isMounted, setIsMounted] = useState(false);
   const baseX = useMotionValue(0);
   const { scrollY } = useScroll();
-  const scrollVelocity = useVelocity(scrollY);
-  const smoothVelocity = useSpring(scrollVelocity, {
+  const textScrollVelocity = useTransform(scrollY, [0, 100], [0, baseVelocity]);
+  const smoothTextVelocity = useSpring(textScrollVelocity, {
     damping: 50,
     stiffness: 400
   });
-  const velocityFactor = useTransform(smoothVelocity, [0, 1000], [0, 5], {
-    clamp: false
-  });
-  const x = useTransform(baseX, (v) => `${wrap(-20, -45, v)}%`);
 
   useEffect(() => {
+    setIsMounted(true);
     let timeoutId: NodeJS.Timeout;
-    function animate() {
-      if (timeoutId) clearTimeout(timeoutId);
-      baseX.set(baseX.get() + baseVelocity);
-      timeoutId = setTimeout(animate, 1000 / 60);
+    
+    if (isMounted) {
+      function animate() {
+        if (timeoutId) clearTimeout(timeoutId);
+        baseX.set(baseX.get() + baseVelocity);
+        timeoutId = setTimeout(animate, 1000 / 60);
+      }
+      animate();
     }
-    animate();
+
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [baseVelocity, baseX]);
+  }, [baseVelocity, baseX, isMounted]);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <div className="overflow-hidden m-0 whitespace-nowrap flex flex-nowrap">
       <motion.div
         className="text-4xl font-bold text-white/10 uppercase tracking-tight"
-        style={{ x }}
+        style={{ x: useTransform(baseX, (v) => `${wrap(-20, -45, v)}%`) }}
       >
         <span className="mr-4">{children}</span>
         <span className="mr-4">{children}</span>
@@ -69,12 +75,21 @@ const ParallaxText = ({ children, baseVelocity = 100 }: { children: string, base
 };
 
 const ScrollProgress = () => {
+  const [isMounted, setIsMounted] = useState(false);
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
     restDelta: 0.001
   });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -179,15 +194,19 @@ export default function HomePage() {
   const router = useRouter();
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const { scrollYProgress } = useScroll();
-  const scrollVelocity = useVelocity(scrollY);
-  const smoothVelocity = useSpring(scrollVelocity || 0, {
+  const { scrollY } = useScroll();
+  const scrollVelocity = useMotionValue(0);
+  const smoothVelocity = useSpring(scrollVelocity, {
     damping: 50,
     stiffness: 400
   });
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    if (scrollY) {
+      scrollVelocity.set(scrollY.get());
+    }
+
     const handleResize = () => {
       setWindowSize({
         width: window.innerWidth,
@@ -209,7 +228,7 @@ export default function HomePage() {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, []);
+  }, [scrollY]);
 
   const features = [
     {
@@ -268,7 +287,6 @@ export default function HomePage() {
     }
   ];
 
-  // Only render scroll-dependent components after mounting
   if (!isMounted) {
     return (
       <main className="min-h-screen bg-black text-white">
@@ -283,7 +301,6 @@ export default function HomePage() {
     <main className="min-h-screen bg-[#020010] text-white relative overflow-hidden">
       <ScrollProgress />
       
-      {/* Back Button */}
       <motion.button
         onClick={() => router.push('/')}
         className="fixed top-6 left-6 z-50 bg-gray-900/80 hover:bg-gray-800/80 text-white px-4 py-2 rounded-full flex items-center gap-2 border border-gray-700/50 backdrop-blur-sm"
@@ -297,7 +314,6 @@ export default function HomePage() {
         <span className={`${spaceGrotesk.className}`}>Back</span>
       </motion.button>
 
-      {/* Enhanced Animated background grid */}
       <div className="fixed inset-0 z-0">
         <motion.div 
           className="absolute inset-0 opacity-20"
@@ -309,7 +325,6 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#020010]/70 to-[#020010]" />
       </div>
 
-      {/* Enhanced Floating particles */}
       {windowSize.width > 0 && [...Array(40)].map((_, i) => (
         <motion.div
           key={i}
@@ -340,9 +355,7 @@ export default function HomePage() {
         />
       ))}
 
-      {/* Content sections */}
       <div className="relative z-10">
-        {/* Hero Section with enhanced animations */}
         <Section className="flex-col space-y-12">
           <motion.div
             initial={{ opacity: 0 }}
@@ -350,7 +363,6 @@ export default function HomePage() {
             transition={{ duration: 1.5 }}
             className="text-center relative"
           >
-            {/* Enhanced background glow effect */}
             <motion.div
               className="absolute inset-0 pointer-events-none"
               initial={{ opacity: 0 }}
@@ -377,7 +389,6 @@ export default function HomePage() {
               ))}
             </motion.div>
 
-            {/* Enhanced title animation */}
             <motion.h1
               className={`text-8xl font-bold mb-8 relative ${orbitron.className}`}
               initial={{ opacity: 0, y: 50 }}
@@ -400,7 +411,6 @@ export default function HomePage() {
               >
                 Training Hub
               </motion.span>
-              {/* Enhanced rotating star */}
               <motion.div
                 className="absolute -top-8 -right-8 w-16 h-16"
                 animate={{
@@ -421,7 +431,6 @@ export default function HomePage() {
               </motion.div>
             </motion.h1>
 
-            {/* Enhanced parallax text */}
             <motion.div
               className="relative"
               initial={{ opacity: 0 }}
@@ -436,7 +445,6 @@ export default function HomePage() {
           <ScrollPrompt />
         </Section>
 
-        {/* Description Section */}
         <Section className="bg-gradient-to-b from-transparent to-blue-900/20">
           <div className="container mx-auto px-4 py-16">
             <motion.div
@@ -472,7 +480,6 @@ export default function HomePage() {
           </div>
         </Section>
 
-        {/* Immersive Learning Section */}
         <Section className="bg-gradient-to-b from-transparent to-blue-900/20">
           <div className="container mx-auto px-4">
             <motion.div 
@@ -516,7 +523,6 @@ export default function HomePage() {
           </div>
         </Section>
 
-        {/* AI-Powered Section */}
         <Section className="bg-gradient-to-b from-blue-900/20 to-purple-900/20">
           <div className="container mx-auto px-4">
             <motion.div 
@@ -560,7 +566,6 @@ export default function HomePage() {
           </div>
         </Section>
 
-        {/* Features Grid Section */}
         <Section className="bg-gradient-to-b from-purple-900/20 to-transparent">
           <div className="container mx-auto px-4">
             <motion.div
@@ -586,7 +591,6 @@ export default function HomePage() {
           </div>
         </Section>
 
-        {/* Call to Action Section */}
         <Section className="bg-gradient-to-b from-transparent to-[#030014]">
           <motion.div
             className="text-center"
@@ -644,7 +648,6 @@ export default function HomePage() {
   );
 }
 
-// Helper function for ParallaxText
 function wrap(min: number, max: number, v: number) {
   const rangeSize = max - min;
   return ((((v - min) % rangeSize) + rangeSize) % rangeSize) + min;
